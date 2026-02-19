@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Checkout</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --g:#00c17c;--gd:#00995f;--gg:rgba(0,193,124,.15);
+      --bg:#0b0f10;--s:#13191b;--s2:#1a2123;
+      --bd:rgba(255,255,255,.07);--t:#eef2f1;--m:#5e7470;
+      --err:#ff5555;
+    }
+    body{
+      background:var(--bg);color:var(--t);
+      font-family:'DM Sans',sans-serif;
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      padding:20px;
+    }
+    body::before{
+      content:'';position:fixed;top:-300px;left:50%;transform:translateX(-50%);
+      width:800px;height:800px;
+      background:radial-gradient(circle,rgba(0,193,124,.06) 0%,transparent 70%);
+      pointer-events:none;
+    }
+    .card{
+      position:relative;z-index:1;
+      background:var(--s);border:1px solid var(--bd);border-radius:24px;
+      width:100%;max-width:460px;padding:36px;
+      box-shadow:0 40px 80px rgba(0,0,0,.5);
+      animation:up .5s cubic-bezier(.16,1,.3,1) both;
+    }
+    @keyframes up{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    .header{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+    .logo{width:32px;height:32px;background:var(--g);border-radius:9px;
+      display:flex;align-items:center;justify-content:center}
+    .logo svg{width:18px;height:18px;fill:none;stroke:#0b0f10;stroke-width:2.5;stroke-linecap:round}
+    .brand{font-family:'Syne',sans-serif;font-weight:700;font-size:.95rem}
+    .tabs{display:flex;background:var(--s2);border-radius:14px;padding:4px;margin-bottom:28px;gap:4px}
+    .tab{flex:1;padding:10px;border:none;background:transparent;
+      color:var(--m);font-family:'DM Sans',sans-serif;font-size:.875rem;font-weight:500;
+      border-radius:11px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+    .tab.active{background:var(--s);color:var(--t);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+    .tab:hover:not(.active){color:var(--t)}
+    .screen{display:none}
+    .screen.active{display:block;animation:up .35s cubic-bezier(.16,1,.3,1) both}
+    .amounts-label{font-size:.7rem;font-weight:500;color:var(--m);
+      text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+    .amounts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+    .amount-btn{
+      padding:14px 8px;background:var(--s2);border:1px solid var(--bd);
+      border-radius:12px;color:var(--t);font-family:'Syne',sans-serif;
+      font-size:.95rem;font-weight:700;cursor:pointer;
+      transition:all .15s;text-align:center;
+    }
+    .amount-btn:hover{border-color:var(--g);background:var(--gg)}
+    .amount-btn.selected{border-color:var(--g);background:var(--gg);color:var(--g)}
+    .custom-wrap{position:relative;margin-bottom:20px}
+    .custom-prefix{position:absolute;left:14px;top:50%;transform:translateY(-50%);
+      color:var(--g);font-weight:600;font-size:.95rem;pointer-events:none}
+    .custom-input{
+      width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:12px;
+      padding:13px 14px 13px 38px;color:var(--t);
+      font-family:'DM Sans',sans-serif;font-size:.95rem;outline:none;
+      transition:border-color .2s,box-shadow .2s;
+    }
+    .custom-input::placeholder{color:var(--m)}
+    .custom-input:focus{border-color:var(--g);box-shadow:0 0 0 3px var(--gg)}
+    .btn{
+      width:100%;padding:15px;background:var(--g);color:#0b0f10;border:none;
+      border-radius:13px;font-family:'Syne',sans-serif;font-size:.95rem;font-weight:700;
+      cursor:pointer;transition:all .2s;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .btn:hover{background:var(--gd);box-shadow:0 8px 24px rgba(0,193,124,.28);transform:translateY(-1px)}
+    .btn:active{transform:translateY(0)}
+    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+    .spinner{width:17px;height:17px;border:2px solid rgba(0,0,0,.2);
+      border-top-color:#0b0f10;border-radius:50%;animation:spin .7s linear infinite;display:none}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .err{background:rgba(255,85,85,.08);border:1px solid rgba(255,85,85,.25);
+      border-radius:10px;padding:11px 14px;color:var(--err);
+      font-size:.825rem;margin-top:14px;display:none}
+    .form-group{margin-bottom:15px}
+    label{display:block;font-size:.7rem;font-weight:500;color:var(--m);
+      text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px}
+    input[type=text],input[type=number],input[type=tel]{
+      width:100%;background:var(--s2);border:1px solid var(--bd);border-radius:12px;
+      padding:13px 14px;color:var(--t);font-family:'DM Sans',sans-serif;
+      font-size:.9rem;outline:none;transition:border-color .2s,box-shadow .2s;
+    }
+    input::placeholder{color:var(--m)}
+    input:focus{border-color:var(--g);box-shadow:0 0 0 3px var(--gg)}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .qr-wrap{text-align:center}
+    .qr-badge{
+      background:linear-gradient(135deg,var(--g),#00a86b);
+      border-radius:18px;padding:20px;display:inline-block;margin-bottom:20px;
+    }
+    .qr-badge img{display:block;width:180px;height:180px;border-radius:8px}
+    .qr-amount{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;
+      letter-spacing:-.04em;color:var(--g);margin-bottom:4px}
+    .qr-sub{color:var(--m);font-size:.8rem;margin-bottom:20px}
+    .copy-box{
+      background:var(--s2);border:1px solid var(--bd);border-radius:12px;
+      padding:12px 14px;cursor:pointer;text-align:left;
+      transition:border-color .2s;position:relative;margin-bottom:10px;
+    }
+    .copy-box:hover{border-color:var(--g)}
+    .copy-lbl{font-size:.65rem;color:var(--m);text-transform:uppercase;
+      letter-spacing:.08em;display:block;margin-bottom:4px}
+    .copy-code{font-size:.75rem;color:var(--t);word-break:break-all;line-height:1.4}
+    .toast{position:absolute;top:-30px;left:50%;transform:translateX(-50%);
+      background:var(--g);color:#0b0f10;font-size:.7rem;font-weight:700;
+      padding:3px 10px;border-radius:6px;opacity:0;transition:opacity .2s;
+      pointer-events:none;white-space:nowrap}
+    .toast.show{opacity:1}
+    .expires{color:var(--m);font-size:.75rem;margin-bottom:16px}
+    .back{background:none;border:none;color:var(--m);font-family:'DM Sans',sans-serif;
+      font-size:.8rem;cursor:pointer;text-decoration:underline;transition:color .2s}
+    .back:hover{color:var(--t)}
+    .success-wrap{text-align:center;padding:10px 0}
+    .success-icon{font-size:3rem;margin-bottom:12px}
+    .success-title{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:800;
+      color:var(--g);margin-bottom:6px}
+    .success-sub{color:var(--m);font-size:.85rem;margin-bottom:20px}
+    .sec{display:flex;align-items:center;justify-content:center;gap:5px;
+      margin-top:18px;color:var(--m);font-size:.7rem}
+    .sec svg{width:11px;height:11px;fill:var(--m)}
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <div class="header">
+    <div class="logo">
+      <svg viewBox="0 0 24 24"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </div>
+    <span class="brand">Checkout</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabPix" onclick="switchTab('pix')">
+      ⚡ Pix
+    </button>
+    <button class="tab" id="tabCard" onclick="switchTab('card')">
+      💳 Cartão
+    </button>
+  </div>
+
+  <!-- PIX -->
+  <div class="screen active" id="pixScreen">
+    <div class="amounts-label">Selecione o valor</div>
+    <div class="amounts">
+      <button class="amount-btn" onclick="selectAmount(this,10)">R$ 10</button>
+      <button class="amount-btn" onclick="selectAmount(this,20)">R$ 20</button>
+      <button class="amount-btn" onclick="selectAmount(this,50)">R$ 50</button>
+      <button class="amount-btn" onclick="selectAmount(this,100)">R$ 100</button>
+      <button class="amount-btn" onclick="selectAmount(this,200)">R$ 200</button>
+      <button class="amount-btn" onclick="selectAmount(this,500)">R$ 500</button>
+    </div>
+    <div class="custom-wrap">
+      <span class="custom-prefix">R$</span>
+      <input class="custom-input" id="pixCustom" type="number" placeholder="Outro valor..." min="1" step="0.01" oninput="clearSelected()"/>
+    </div>
+    <button class="btn" id="pixBtn" onclick="gerarPix()">
+      <span id="pixBtnText">⚡ Gerar QR Code Pix</span>
+      <div class="spinner" id="pixSpinner"></div>
+    </button>
+    <div class="err" id="pixErr"></div>
+  </div>
+
+  <!-- QR -->
+  <div class="screen" id="qrScreen">
+    <div class="qr-wrap">
+      <div class="qr-badge">
+        <div id="qrCanvas" style="width:180px;height:180px;border-radius:8px;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center"></div>
+      </div>
+      <div class="qr-amount" id="qrAmount">R$ 0,00</div>
+      <div class="qr-sub">Escaneie o QR Code ou copie o código abaixo</div>
+      <div class="copy-box" onclick="copiar()">
+        <span class="copy-lbl">Pix Copia e Cola</span>
+        <span class="copy-code" id="pixCode">—</span>
+        <span class="toast" id="toast">✓ Copiado!</span>
+      </div>
+      <p class="expires">⏱ Expira em 24 horas</p>
+      <button class="back" onclick="voltarPix()">← Novo pagamento</button>
+    </div>
+  </div>
+
+  <!-- CARTÃO -->
+  <div class="screen" id="cardScreen">
+    <div class="form-group">
+      <label>Nome no cartão</label>
+      <input type="text" id="cardName" placeholder="JOÃO DA SILVA" style="text-transform:uppercase"/>
+    </div>
+    <div class="form-group">
+      <label>Número do cartão</label>
+      <input type="tel" id="cardNumber" placeholder="0000 0000 0000 0000" maxlength="19" oninput="maskCard(this)"/>
+    </div>
+    <div class="row2">
+      <div class="form-group">
+        <label>Validade</label>
+        <input type="tel" id="cardExpiry" placeholder="MM/AA" maxlength="5" oninput="maskExpiry(this)"/>
+      </div>
+      <div class="form-group">
+        <label>CVV</label>
+        <input type="tel" id="cardCvv" placeholder="000" maxlength="4"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>CPF do portador</label>
+      <input type="tel" id="cardCpf" placeholder="000.000.000-00" maxlength="14" oninput="maskCpf(this)"/>
+    </div>
+    <div class="form-group">
+      <label>Valor (R$)</label>
+      <input type="number" id="cardAmount" placeholder="0,00" min="1" step="0.01"/>
+    </div>
+    <button class="btn" id="cardBtn" onclick="pagarCartao()">
+      <span id="cardBtnText">💳 Pagar com Cartão</span>
+      <div class="spinner" id="cardSpinner"></div>
+    </button>
+    <div class="err" id="cardErr"></div>
+  </div>
+
+  <!-- SUCESSO CARTÃO -->
+  <div class="screen" id="successScreen">
+    <div class="success-wrap">
+      <div class="success-icon">✅</div>
+      <div class="success-title">Pagamento aprovado!</div>
+      <div class="success-sub" id="successMsg">Transação processada com sucesso.</div>
+      <button class="btn" style="margin-top:8px" onclick="voltarCard()">Novo pagamento</button>
+    </div>
+  </div>
+
+  <div class="sec">
+    <svg viewBox="0 0 24 24"><path d="M12 1l-9 4v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+    Pagamento seguro via Street Payments
+  </div>
+
+</div>
+<script>
+// ⚠️ TROQUE PELAS SUAS NOVAS CHAVES após revogar as antigas
+const PK    = 'pk_T9BHS5vWdnGS9PeK-yaC2hwnQoeLoXzgqihDxNWlQjLVACiM';
+const SK    = 'sk_2J8HYI1oy5iHEkVqW7IUF783v2p4wMcK-WXAhCASrecLx44P';
+const BASIC = btoa(PK + ':' + SK);
+const API   = 'https://api.streetpayments.com.br/v1/transactions';
+
+let selAmount = null;
+
+function switchTab(tab) {
+  ['pixScreen','qrScreen','cardScreen','successScreen'].forEach(id => {
+    document.getElementById(id).classList.remove('active');
+  });
+  document.getElementById('tabPix').classList.toggle('active', tab==='pix');
+  document.getElementById('tabCard').classList.toggle('active', tab==='card');
+  document.getElementById(tab==='pix' ? 'pixScreen' : 'cardScreen').classList.add('active');
+}
+
+function selectAmount(btn, val) {
+  document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selAmount = val;
+  document.getElementById('pixCustom').value = '';
+}
+
+function clearSelected() {
+  document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('selected'));
+  selAmount = null;
+}
+
+async function gerarPix() {
+  const custom = parseFloat(document.getElementById('pixCustom').value);
+  const amount = selAmount || custom;
+  if (!amount || amount <= 0) { showErr('pixErr','Selecione ou digite um valor.'); return; }
+
+  loading('pixBtn','pixSpinner','pixBtnText',true,'Gerando...');
+  hideErr('pixErr');
+
+  const cents = Math.round(amount * 100);
+  try {
+    const res = await fetch(API, {
+      method:'POST',
+      headers:{'accept':'application/json','content-type':'application/json','authorization':'Basic '+BASIC},
+      body: JSON.stringify({
+        amount: cents,
+        paymentMethod:'pix',
+        customer:{
+          name:'Cliente Teste',
+          email:'cliente@checkout.com',
+          document:{ type:'cpf', number:'00000000000' },
+          phone:'11999999999',
+        },
+        items:[{title:'Pagamento',quantity:1,unitPrice:cents,tangible:false}],
+        pix:{expiresInDays:1},
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(JSON.stringify(data));
+
+    const brCode = data?.pix?.qrcode || '';
+
+    // Gera QR Code visualmente a partir do código texto
+    const qrContainer = document.getElementById('qrCanvas');
+    qrContainer.innerHTML = '';
+    new QRCode(qrContainer, {
+      text: brCode,
+      width: 180,
+      height: 180,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+
+    document.getElementById('pixCode').textContent = brCode || '(código não encontrado)';
+    document.getElementById('qrAmount').textContent = amount.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+
+    document.getElementById('pixScreen').classList.remove('active');
+    document.getElementById('qrScreen').classList.add('active');
+    console.log('Resposta Pix completa:', data); // útil para debug
+  } catch(e) {
+    showErr('pixErr','Erro ao gerar Pix. Veja o console (F12) para detalhes.');
+    console.error(e);
+  } finally {
+    loading('pixBtn','pixSpinner','pixBtnText',false,'⚡ Gerar QR Code Pix');
+  }
+}
+
+function copiar() {
+  const code = document.getElementById('pixCode').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const t = document.getElementById('toast');
+    t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),2000);
+  });
+}
+
+function voltarPix() {
+  document.getElementById('qrScreen').classList.remove('active');
+  document.getElementById('pixScreen').classList.add('active');
+}
+
+async function pagarCartao() {
+  const name   = document.getElementById('cardName').value.trim();
+  const number = document.getElementById('cardNumber').value.replace(/\s/g,'');
+  const expiry = document.getElementById('cardExpiry').value;
+  const cvv    = document.getElementById('cardCvv').value.trim();
+  const cpf    = document.getElementById('cardCpf').value.replace(/\D/g,'');
+  const amount = parseFloat(document.getElementById('cardAmount').value);
+
+  if (!name||!number||!expiry||!cvv||!cpf||!amount) {
+    showErr('cardErr','Preencha todos os campos.'); return;
+  }
+  const [expM,expY] = expiry.split('/');
+  if (!expM||!expY) { showErr('cardErr','Validade inválida.'); return; }
+
+  loading('cardBtn','cardSpinner','cardBtnText',true,'Processando...');
+  hideErr('cardErr');
+
+  try {
+    // Carrega a biblioteca da Street Payments dinamicamente
+    if (typeof StreetPayments === 'undefined') {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://api.streetpayments.com.br/v1/js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    await StreetPayments.setPublicKey(PK);
+    const token = await StreetPayments.encrypt({
+      number, holderName:name,
+      expMonth:parseInt(expM), expYear:parseInt('20'+expY), cvv
+    });
+
+    const cents = Math.round(amount * 100);
+    const res = await fetch(API, {
+      method:'POST',
+      headers:{'accept':'application/json','content-type':'application/json','authorization':'Basic '+BASIC},
+      body: JSON.stringify({
+        amount: cents,
+        paymentMethod:'credit_card',
+        installments:1,
+        card:{token},
+        customer:{name, email:'cliente@checkout.com', document:{ type:'cpf', number:cpf }},
+        items:[{title:'Pagamento',quantity:1,unitPrice:cents,tangible:false}],
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(JSON.stringify(data));
+
+    document.getElementById('successMsg').textContent =
+      `Valor: ${amount.toLocaleString('pt-BR',{style:'currency',currency:'BRL'})} — Status: ${data?.status || 'aprovado'}`;
+    document.getElementById('cardScreen').classList.remove('active');
+    document.getElementById('successScreen').classList.add('active');
+    console.log('Resposta Cartão:', data);
+  } catch(e) {
+    showErr('cardErr','Erro ao processar. Veja o console (F12).');
+    console.error(e);
+  } finally {
+    loading('cardBtn','cardSpinner','cardBtnText',false,'💳 Pagar com Cartão');
+  }
+}
+
+function voltarCard() {
+  document.getElementById('successScreen').classList.remove('active');
+  document.getElementById('cardScreen').classList.add('active');
+}
+
+function maskCard(el){
+  let v=el.value.replace(/\D/g,'').substring(0,16);
+  el.value=v.replace(/(.{4})/g,'$1 ').trim();
+}
+function maskExpiry(el){
+  let v=el.value.replace(/\D/g,'').substring(0,4);
+  if(v.length>=3)v=v.substring(0,2)+'/'+v.substring(2);
+  el.value=v;
+}
+function maskCpf(el){
+  let v=el.value.replace(/\D/g,'').substring(0,11);
+  v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+  el.value=v;
+}
+
+function loading(btnId,spinnerId,textId,on,txt){
+  document.getElementById(btnId).disabled=on;
+  document.getElementById(spinnerId).style.display=on?'block':'none';
+  document.getElementById(textId).textContent=txt;
+}
+function showErr(id,msg){
+  const el=document.getElementById(id);
+  el.textContent='⚠️ '+msg;el.style.display='block';
+}
+function hideErr(id){document.getElementById(id).style.display='none';}
+</script>
+</body>
+</html>
