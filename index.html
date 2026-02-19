@@ -361,23 +361,6 @@ async function pagarCartao() {
   hideErr('cardErr');
 
   try {
-    // Carrega a biblioteca da Street Payments dinamicamente
-    if (typeof StreetPayments === 'undefined') {
-      await new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://api.streetpayments.com.br/v1/js';
-        s.onload = resolve;
-        s.onerror = reject;
-        document.head.appendChild(s);
-      });
-    }
-
-    await StreetPayments.setPublicKey(PK);
-    const token = await StreetPayments.encrypt({
-      number, holderName:name,
-      expMonth:parseInt(expM), expYear:parseInt('20'+expY), cvv
-    });
-
     const cents = Math.round(amount * 100);
     const res = await fetch(API, {
       method:'POST',
@@ -386,7 +369,13 @@ async function pagarCartao() {
         amount: cents,
         paymentMethod:'credit_card',
         installments:1,
-        card:{token},
+        card:{
+          number,
+          holderName: name,
+          expirationMonth: parseInt(expM),
+          expirationYear: parseInt('20'+expY),
+          cvv,
+        },
         customer:{name, email:'cliente@checkout.com', document:{ type:'cpf', number:cpf }},
         items:[{title:'Pagamento',quantity:1,unitPrice:cents,tangible:false}],
       })
